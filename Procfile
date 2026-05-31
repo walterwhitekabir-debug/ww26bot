@@ -1,1 +1,1 @@
-worker: python ww26_bot.py
+worker: python ww26_bot_v2.py
