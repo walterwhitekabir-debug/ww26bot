@@ -194,29 +194,7 @@ EQUIP = {
 
 PROFANITY = ["کس","کیر","کون","جنده","مادرجنده","بیشعور","خر","گاو","الاغ","احمق","لاشی","عوضی","اشغال","بی‌ناموس","ناموس","fuck","shit","bitch","ass","dick","pussy"]
 
-async def ai_check_scenario(scenario, equip_list):
-    """AI سناریو رو با تجهیزات واقعی مقایسه میکنه"""
-    client=get_ai()
-    equip_names=[e['name'] for e in equip_list]
-    if not client:
-        # چک ساده بدون AI
-        missing=check_scenario(scenario,equip_list)
-        if missing:
-            return {"valid":False,"reason":f"تجهیزات زیر رو نداری: {', '.join(missing)}"}
-        return {"valid":True,"reason":""}
-    try:
-        r=client.messages.create(model="claude-sonnet-4-20250514",max_tokens=300,
-            system='''تو بررسی‌کننده سناریوی نظامی هستی.
-سناریو رو با لیست تجهیزات واقعی بازیکن مقایسه کن.
-اگه بازیکن در سناریو از سلاح یا تجهیزی استفاده کرده که در لیستش نیست، رد کن.
-فقط JSON: {"valid":true/false,"reason":"دلیل فارسی - اگه false باشه بگو دقیقاً چه تجهیزی نداره"}''',
-            messages=[{"role":"user","content":f"تجهیزات واقعی بازیکن:\n{chr(10).join('- '+n for n in equip_names)}\n\nسناریو:\n{scenario}"}])
-        return json.loads(r.content[0].text.strip().replace("```json","").replace("```",""))
-    except:
-        missing=check_scenario(scenario,equip_list)
-        if missing:
-            return {"valid":False,"reason":f"تجهیزات زیر رو نداری: {', '.join(missing)}"}
-        return {"valid":True,"reason":""}
+WEAPON_KEYWORDS = {
     "بمب اتم":["atom"],"اتمی":["atom","neutron"],"نوترون":["neutron"],
     "موشک کروز":["cruise"],"کروز":["cruise"],"بالستیک":["ballistic"],
     "هایپرسونیک":["hypersonic","kinzhal"],"قاره پیما":["icbm"],"قاره‌پیما":["icbm"],
@@ -248,6 +226,26 @@ def check_scenario(scenario, equip_list):
             if not any(n in equip_ids for n in needed):
                 missing.append(kw)
     return missing
+
+async def ai_check_scenario(scenario, equip_list):
+    """AI سناریو رو با تجهیزات واقعی مقایسه میکنه"""
+    client=get_ai()
+    equip_names=[e['name'] for e in equip_list]
+    if not client:
+        missing=check_scenario(scenario,equip_list)
+        if missing:
+            return {"valid":False,"reason":f"تجهیزات زیر رو نداری: {', '.join(missing)}"}
+        return {"valid":True,"reason":""}
+    try:
+        r=client.messages.create(model="claude-sonnet-4-20250514",max_tokens=300,
+            system='تو بررسی‌کننده سناریوی نظامی هستی. سناریو رو با لیست تجهیزات واقعی بازیکن مقایسه کن. اگه از سلاحی استفاده کرده که ندارد رد کن. فقط JSON: {"valid":true/false,"reason":"دلیل فارسی"}',
+            messages=[{"role":"user","content":f"تجهیزات بازیکن:\n{chr(10).join('- '+n for n in equip_names)}\n\nسناریو:\n{scenario}"}])
+        return json.loads(r.content[0].text.strip().replace("```json","").replace("```",""))
+    except:
+        missing=check_scenario(scenario,equip_list)
+        if missing:
+            return {"valid":False,"reason":f"تجهیزات زیر رو نداری: {', '.join(missing)}"}
+        return {"valid":True,"reason":""}
 
 async def ai_check_decl(country,text):
     for bad in PROFANITY:
